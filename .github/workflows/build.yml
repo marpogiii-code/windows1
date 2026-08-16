@@ -26,6 +26,6 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          tags: "${{ secrets.DOCKER_USER }}/ranmar:latest"
+          tags: "${{ secrets.DOCKER_USER }}/mar_linux-amd64"
           outputs: ${{ github.event_name == 'pull_request' && 'type=cacheonly' || 'type=registry' }}
   
