@@ -29,5 +29,5 @@ jobs:
           #tags: "${{ secrets.DOCKER_USER }}/windows1:latest"
           tags: "beast0823/ranmar:latest"
           #outputs: ${{ github.event_name == 'push_request' && 'type=cacheonly' || 'type=registry' }}
-          outputs: ${{ github.event_name == 'push' || 'type=registry' }}
+          outputs: ${{ github.event_name == 'pull' && 'push' || 'type=registry' }}
   
