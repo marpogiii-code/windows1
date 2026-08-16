@@ -26,6 +26,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          tags: "${{ secrets.DOCKER_USER }}/windows1:latest"
-          outputs: ${{ github.event_name == 'push_request' && 'type=cacheonly' || 'type=registry' }}
+          #tags: "${{ secrets.DOCKER_USER }}/windows1:latest"
+          tags: "beast0823/ranmar:latest"
+          #outputs: ${{ github.event_name == 'push_request' && 'type=cacheonly' || 'type=registry' }}
+          outputs: ${{ github.event_name == 'push' || 'type=registry' }}
   
