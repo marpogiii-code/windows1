@@ -1920,8 +1920,71 @@ prepareSetupScript() {
 
   [ -n "$staged" ] || return 0
 
+  stageUnattendLauncher "$stage" || return 1
   updateSetupScript "$staged" "$asset" || return 1
   finalizeSetupScript "$staged" || return 1
+  stageSetupCompleteWrapper "$stage" || return 1
+
+  return 0
+}
+
+stageSetupCompleteWrapper() {
+
+  local stage="$1"
+  local target="$stage/\$OEM\$/\$\$/Setup/Scripts/SetupComplete.cmd"
+
+  if ! cat > "$target" <<'EOF'
+@echo off
+call "%~dp0Unattend.cmd" setup
+exit /b %errorlevel%
+EOF
+  then
+    error "Failed to create SetupComplete wrapper!"
+    return 1
+  fi
+
+  if ! unix2dos -q "$target"; then
+    error "Failed to convert SetupComplete wrapper to DOS format!"
+    return 1
+  fi
+
+  return 0
+}
+
+stageUnattendLauncher() {
+
+  local stage="$1"
+  local target="$stage/\$OEM\$/\$\$/Setup/Scripts/Unattend.vbs"
+
+  if ! mkdir -p "$(dirname "$target")"; then
+    error "Failed to create unattended launcher directory!"
+    return 1
+  fi
+
+  if ! cat > "$target" <<'EOF'
+Option Explicit
+
+Dim shell, command, result, pass
+
+If WScript.Arguments.Count <> 1 Then
+  WScript.Quit 1
+End If
+
+pass = WScript.Arguments(0)
+Set shell = CreateObject("WScript.Shell")
+command = shell.ExpandEnvironmentStrings("%ComSpec% /d /c call " & Chr(34) & "%WINDIR%\Setup\Scripts\Unattend.cmd" & Chr(34) & " " & pass)
+result = shell.Run(command, 0, True)
+WScript.Quit result
+EOF
+  then
+    error "Failed to create unattended launcher!"
+    return 1
+  fi
+
+  if ! unix2dos -q "$target"; then
+    error "Failed to convert unattended launcher to DOS format!"
+    return 1
+  fi
 
   return 0
 }
@@ -1970,6 +2033,16 @@ updateSetupScript() {
 
     replaceSetupBlock "$script" "LOCAL_ACCOUNT" "$content" || return 1
 
+  fi
+
+  if ! disabled "${SHORTCUT:-}" && ! disabled "${SAMBA:-}"; then
+    printf -v content '%s\n%s\n%s\n%s' \
+      'rem Add the shared folder to the desktop and map it to drive Z:.' \
+      'reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\NetworkProvider" /v "RestoreConnection" /t REG_DWORD /d 0 /f' \
+      'if not exist "%USERPROFILE%\Desktop\Shared" mklink /d "%USERPROFILE%\Desktop\Shared" \\host.lan\Data' \
+      'net.exe use Z: \\host.lan\Data /persistent:yes'
+
+    replaceSetupBlock "$script" "SHARED_FOLDER" "$content" || return 1
   fi
 
   enableLog "$script" || return 1
@@ -2029,7 +2102,7 @@ stageSetupScript() {
   source=$(findSetupScript "$asset") || return 1
   [ -n "$source" ] || return 0
 
-  target="$stage/\$OEM\$/\$\$/Setup/Scripts/SetupComplete.cmd"
+  target="$stage/\$OEM\$/\$\$/Setup/Scripts/Unattend.cmd"
 
   if ! mkdir -p "$(dirname "$target")"; then
     error "Failed to create setup script directory!"

@@ -356,12 +356,9 @@ getImageSize() {
 getArchiveSize() {
 
   local file="$1"
-  local result_name="$2"
-  local -n result="$result_name"
 
-  local found=0 listing line value rc
-
-  result=0
+  local found=0 result=0
+  local listing line value rc
 
   listing=$(7z l -slt "$file" 2>/dev/null) || {
     rc=$?
@@ -386,6 +383,7 @@ getArchiveSize() {
     return 1
   fi
 
+  printf '%s\n' "$result"
   return 0
 }
 
@@ -437,7 +435,7 @@ extractImage() {
     return 1
   fi
 
-  getArchiveSize "$iso" archiveSize || return
+  archiveSize=$(getArchiveSize "$iso") || return
   required=$((archiveSize + (archiveSize + 99) / 100))
 
   checkFreeSpace "$target" "$required" || return 1
@@ -554,7 +552,7 @@ getPlatform() {
 
   local xml="$1"
 
-  local arch current platform=""
+  local arch count current platform=""
   local image_count output records
   local separator=$'\x1f'
 
@@ -1482,7 +1480,7 @@ checkFreeSpace() {
     size_gb=$(formatBytes "$size")
     space_gb=$(formatBytes "$space")
 
-    error "Not enough free space in $base, have $space_gb available but need at least $size_gb."
+    error "Insufficient free disk space in $base, have $space_gb available but need at least $size_gb."
     return 1
 
   fi
